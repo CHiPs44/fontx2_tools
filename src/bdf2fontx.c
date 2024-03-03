@@ -18,7 +18,7 @@
 #ifdef LSI_C
 #define MSDOS
 #define HAVE_FSETBIN
-#undef  HAVE_STRNCASECMP
+#undef HAVE_STRNCASECMP
 #endif
 #include <wchar.h>
 #include <locale.h>
@@ -59,9 +59,9 @@
 
 #define CHARS_SBCS 256
 
-
 /* $fontx2 file header information */
-typedef struct {
+typedef struct
+{
     char id[ID_LEN];
     char name[NAM_LEN];
     unsigned char width;
@@ -69,19 +69,17 @@ typedef struct {
     unsigned char type;
 } fontx_h;
 
-
 /* Table of stored characters */
-typedef struct {
+typedef struct
+{
     unsigned short start;
     unsigned short end;
 } fontx_tbl;
 
-
 int match(char *s, char *t)
 {
-    return(strncasecmp(s, t, strlen(t)));
+    return (strncasecmp(s, t, strlen(t)));
 }
-
 
 #define XLFDCONV \
     "FONT -%[^-]-%*[^-]-%*[^-]-%*[^-]-%*[^-]--%d-%*d-%*d-%*d-%*[^-]-%d-%[^-]-%*s"
@@ -99,60 +97,74 @@ void bdfheader(char *name, int *width, int *height, int *type, int *sjis)
     *width = *height = -1;
 
     strcpy(name, "unknown");
-    while (fgets(s, BUFSIZ, stdin) != NULL) {
-        if (match(s, "ENDPROPERTIES") == 0) {
+    while (fgets(s, BUFSIZ, stdin) != NULL)
+    {
+        if (match(s, "ENDPROPERTIES") == 0)
+        {
             break;
         }
-        if (match(s, "FONT ") == 0) {
+        if (match(s, "FONT ") == 0)
+        {
             sscanf(s, XLFDCONV, name, height, width, coding);
-            if (-1 == *height) {
+            if (-1 == *height)
+            {
                 sscanf(s, XLFDCONV2, name, height, width, coding);
             }
 
             *width /= 10;
-            if (match(coding, "jisx0201") == 0) {
+            if (match(coding, "jisx0201") == 0)
+            {
                 *type = 0;
-            } else if (match(coding, "jisx0208") == 0) {
+            }
+            else if (match(coding, "jisx0208") == 0)
+            {
                 *type = 1;
                 *sjis = 1;
-            } else if (match(coding, "ISO10646") == 0) {
+            }
+            else if (match(coding, "ISO10646") == 0)
+            {
                 *type = 1;
-            } else {
+            }
+            else
+            {
                 *type = 0;
             }
         }
 
-        if (match(s, "FONTBOUNDINGBOX") == 0) {
+        if (match(s, "FONTBOUNDINGBOX") == 0)
+        {
             sscanf(s, "FONTBOUNDINGBOX %d %d %*d %*d", width, height);
         }
     }
 }
-
 
 char *temp()
 {
     static char temp[BUFSIZ];
     char *s;
 
-    if ((s = getenv("TMP")) != NULL) {
+    if ((s = getenv("TMP")) != NULL)
+    {
         strcpy(temp, s);
-        return(temp);
-    } else if ((s = getenv("TEMP")) != NULL) {
+        return (temp);
+    }
+    else if ((s = getenv("TEMP")) != NULL)
+    {
         strcpy(temp, s);
-        return(temp);
-    } else {
+        return (temp);
+    }
+    else
+    {
         strcpy(temp, TEMPDEFAULT);
     }
 
-    return(temp);
+    return (temp);
 }
-
 
 /* Byte decomposition and composition */
 #define lobyte(x) (((unsigned short)(x)) & 0xff)
 #define hibyte(x) ((((unsigned short)(x)) >> 8) & 0xff)
-#define hilo(h,l) ((((unsigned char)(h)) << 8) | ((unsigned char)(l)))
-
+#define hilo(h, l) ((((unsigned char)(h)) << 8) | ((unsigned char)(l)))
 
 /* Overview of Shift JIS encoding
  *
@@ -183,23 +195,27 @@ int jtos(unsigned short ch)
 
     /* High byte processing */
     x = (hi - JIS_START) / 2 + SJIS_HS1;
-    if (x > SJIS_HE1) {
+    if (x > SJIS_HE1)
+    {
         x += (SJIS_HS2 - SJIS_HE1 - 1);
     }
 
     /* Low byte processing */
-    if (hi % 2 == 1) {  /* Odd area */
+    if (hi % 2 == 1)
+    { /* Odd area */
         y = lo - JIS_START + SJIS_LS1;
-        if (y >= DELETE) {
+        if (y >= DELETE)
+        {
             ++y;
         }
-    } else {  /* Even zone */
+    }
+    else
+    { /* Even zone */
         y = lo - JIS_START + SJIS_LS2;
     }
 
-    return(hilo(x, y));
+    return (hilo(x, y));
 }
-
 
 /* Read BDF file and write to intermediate file */
 int collect(FILE *co, FILE *gl, int width, int height, int type, int *ntab, int *sjis)
@@ -225,17 +241,23 @@ int collect(FILE *co, FILE *gl, int width, int height, int type, int *ntab, int 
 
     int *rawcharbuffer = malloc(height * convwidth / 8);
 
-    if(rawcharbuffer == NULL) {
-       fprintf(stderr, "error while allocating memory\n"); 
-       exit(-1);
+    if (rawcharbuffer == NULL)
+    {
+        fprintf(stderr, "error while allocating memory\n");
+        exit(-1);
     }
+    // int rawcharbuffer[4096];
 
-    while(fgets(s, BUFSIZ, stdin) != NULL) {
-        if (match(s, "ENCODING") == 0) {
+    while (fgets(s, BUFSIZ, stdin) != NULL)
+    {
+        if (match(s, "ENCODING") == 0)
+        {
             sscanf(s, "ENCODING %d", &n);
             code = *sjis ? jtos(n) : n;
-            if (lastcode + 1 != code) {
-                if (start != 0) {
+            if (lastcode + 1 != code)
+            {
+                if (start != 0)
+                {
                     fprintf(stderr, "Table %d %04x -> %04x\n", *ntab, start, lastcode);
 
                     fprintf(co, "%04x %04x\n", start, lastcode);
@@ -243,10 +265,14 @@ int collect(FILE *co, FILE *gl, int width, int height, int type, int *ntab, int 
                 }
                 start = code;
                 /* ANK font is embedded. TODO: If out of order */
-                if (type == 0) {
-                    for (++lastcode; lastcode < code; ++lastcode) {
-                        for (y = 0; y < height; y++) {
-                            for (x = convwidth; x > 0; x -= 8) {
+                if (type == 0)
+                {
+                    for (++lastcode; lastcode < code; ++lastcode)
+                    {
+                        for (y = 0; y < height; y++)
+                        {
+                            for (x = convwidth; x > 0; x -= 8)
+                            {
                                 putc(0, gl);
                             }
                         }
@@ -254,57 +280,73 @@ int collect(FILE *co, FILE *gl, int width, int height, int type, int *ntab, int 
                 }
             }
             lastcode = code;
-            while (match(s, "BITMAP") != 0) {
-                if (fgets(s, BUFSIZ, stdin) == NULL) {
+            while (match(s, "BITMAP") != 0)
+            {
+                if (fgets(s, BUFSIZ, stdin) == NULL)
+                {
                     break;
                 }
             }
 
-            for (y = 0; y < height; y++) {
-                if (fgets(s, BUFSIZ, stdin) == NULL) {
+            for (y = 0; y < height; y++)
+            {
+                if (fgets(s, BUFSIZ, stdin) == NULL)
+                {
                     break;
                 }
                 /* Some characters may be smaller than reported header height */
-                if (match(s, "ENDCHAR") == 0) {
+                if (match(s, "ENDCHAR") == 0)
+                {
                     break;
                 }
-                while(strlen(s) * 4 < convwidth) {
-                    s[strlen(s)-1] = '\0';
+                while (strlen(s) * 4 < convwidth)
+                {
+                    s[strlen(s) - 1] = '\0';
                     strcat(s, "00\n");
                 }
                 sscanf(s, "%x", &p);
-                for (x = convwidth; x > 0; x -= 8) {
+                for (x = convwidth; x > 0; x -= 8)
+                {
                     b = (p >> (x - 8)) & 0xff;
                     rawcharbuffer[(x / 8) + (y * convwidth / 8)] = b;
                 }
             }
 
-
-            if (code != 0) {
+            if (code != 0)
+            {
                 int realcharacterheight = y;
                 /* Add empty pixels to fill empty space at top of character */
-                while(y < height) {
-                    for (x = convwidth; x > 0; x -= 8) {
-                        putc(0x00, gl); 
+                while (y < height)
+                {
+                    for (x = convwidth; x > 0; x -= 8)
+                    {
+                        putc(0x00, gl);
                     }
                     y++;
                 }
 
                 y = 0;
-                while(y < realcharacterheight) {
-                    for (x = convwidth; x > 0; x -= 8) {
-                        putc(rawcharbuffer[(x / 8) + (y * convwidth / 8)], gl); 
+                while (y < realcharacterheight)
+                {
+                    for (x = convwidth; x > 0; x -= 8)
+                    {
+                        // putc(rawcharbuffer[(x / 8) + (y * convwidth / 8)], gl);
+                        fputc(rawcharbuffer[(x / 8) + (y * convwidth / 8)], gl);
                     }
                     y++;
                 }
             }
 
             /* Ignore extra character lines if any */
-            while(match(s, "ENDCHAR") != 0 && fgets(s, BUFSIZ, stdin) != NULL);
+            while (match(s, "ENDCHAR") != 0 && fgets(s, BUFSIZ, stdin) != NULL)
+                ;
 
-            if (match(s, "ENDCHAR") != 0) {
+            if (match(s, "ENDCHAR") != 0)
+            {
                 fprintf(stderr, "no ENDCHAR at %d (0x%x)\n", n, n);
-            } else {
+            }
+            else
+            {
                 fwprintf(stderr, L"%lc ", code);
                 fprintf(stderr, "%d (0x%x)\n", code, code);
                 ++chars;
@@ -315,18 +357,21 @@ int collect(FILE *co, FILE *gl, int width, int height, int type, int *ntab, int 
     fprintf(co, "%x %x\n", start, lastcode);
     ++*ntab;
     /* ANK font fills up to 0xff */
-    if (type == 0) {
-        for (++lastcode; lastcode < 256; ++lastcode) {
-            for (y = 0; y < height; y++) {
-                for (x = convwidth; x > 0; x -= 8) {
+    if (type == 0)
+    {
+        for (++lastcode; lastcode < 256; ++lastcode)
+        {
+            for (y = 0; y < height; y++)
+            {
+                for (x = convwidth; x > 0; x -= 8)
+                {
                     putc(0, gl);
                 }
             }
         }
     }
-    return(chars);
+    return (chars);
 }
-
 
 #define FONTXNAMLEN 8
 
@@ -335,14 +380,17 @@ void fontxheader(char *name, int width, int height, int type)
     int i;
 
     fputs("FONTX2", stdout);
-    for (i = 0; i < FONTXNAMLEN; i++) {
-        if (name[i] == EOS) {
+    for (i = 0; i < FONTXNAMLEN; i++)
+    {
+        if (name[i] == EOS)
+        {
             break;
         }
         putc(toupper(name[i]), stdout);
     }
 
-    for (; i < FONTXNAMLEN; i++) {
+    for (; i < FONTXNAMLEN; i++)
+    {
         putc(' ', stdout);
     }
 
@@ -351,12 +399,12 @@ void fontxheader(char *name, int width, int height, int type)
     putc(type, stdout);
 }
 
-
 void codetable(FILE *co)
 {
     int start, end;
 
-    while (fscanf(co, "%x %x", &start, &end) == 2) {
+    while (fscanf(co, "%x %x", &start, &end) == 2)
+    {
         putc(lobyte(start), stdout);
         putc(hibyte(start), stdout);
         putc(lobyte(end), stdout);
@@ -368,8 +416,8 @@ int main()
 {
     int width, height, type;
     char name[BUFSIZ];
-    char fcodetab[BUFSIZ];	/* Code table intermediate file */
-    char fglyph[BUFSIZ];	/* Glyph intermediate file */
+    char fcodetab[BUFSIZ]; /* Code table intermediate file */
+    char fglyph[BUFSIZ];   /* Glyph intermediate file */
     FILE *co, *gl;
     int n;
     int ntab;
@@ -383,29 +431,35 @@ int main()
     strcpy(fglyph, temp());
     strcat(fglyph, "/fXXXXXX.tbl");
 
-    if ((co = fopen(fcodetab, "wb")) == NULL) {
+    if ((co = fopen(fcodetab, "wb")) == NULL)
+    {
         fprintf(stderr, "can't open %s\n", fcodetab);
         exit(1);
     }
 
-    if ((gl = fopen(fglyph, "wb")) == NULL) {
+    if ((gl = fopen(fglyph, "wb")) == NULL)
+    {
         fprintf(stderr, "can't open %s\n", fglyph);
         exit(1);
     }
 
     n = collect(co, gl, width, height, type, &ntab, &sjis);
-    if (fclose(co) != 0) {
+    if (fclose(co) != 0)
+    {
         fprintf(stderr, "can't close %s\n", fcodetab);
     }
 
-    if (fclose(gl) != 0) {
+    if (fclose(gl) != 0)
+    {
         fprintf(stderr, "can't close %s\n", fglyph);
     }
 
     fprintf(stderr, "%d chars, %d tables\n", n, ntab);
     fontxheader(name, width, height, type);
-    if (type != 0) {
-        if ((co = fopen(fcodetab, "rb")) == NULL) {
+    if (type != 0)
+    {
+        if ((co = fopen(fcodetab, "rb")) == NULL)
+        {
             fprintf(stderr, "can't open %s\n", fcodetab);
             exit(1);
         }
@@ -413,12 +467,14 @@ int main()
         codetable(co);
     }
 
-    if ((gl = fopen(fglyph, "rb")) == NULL) {
+    if ((gl = fopen(fglyph, "rb")) == NULL)
+    {
         fprintf(stderr, "can't open %s\n", fglyph);
         exit(1);
     }
 
-    while ((ch = getc(gl)) != EOF) {
+    while ((ch = getc(gl)) != EOF)
+    {
         putc(ch, stdout);
     }
 
